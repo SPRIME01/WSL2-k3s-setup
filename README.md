@@ -71,12 +71,6 @@ Uninstall everything related to k3s with a simple:
 k3s-uninstall.sh
 ```
 
-If you want to uninstall nginx too (WSL2 only):
-
-```bash
-sudo apt remove nginx
-```
-
 ---
 
 ## Give me the details
@@ -87,7 +81,7 @@ For Linux it will simply install K3s and prepare a few more services like, metri
 
 ### Inside WSL2
 
-In WSL2 it will spin up K3s inside the WSL environment, deploy the same services like on the Linux environment and expose the Ingress nginx HTTPS port (443) to the host machine using Nginx as a reverse proxy.
+In WSL2 it will spin up K3s inside the WSL environment, deploy the same services like on the Linux environment and configure K3s to use external Traefik on the Windows host.
 
 ### All the scripts in detail
 
@@ -127,10 +121,9 @@ It will call the following sub-scripts:
 
       **Install the self-signed root certificate into your local browser or computer truststore for root certificates.**
 
-3. `nginx/prepare-nginx`
+3. `k3s-setup.sh`
 
-   This script will only be executed when the setup was started in context of WSL2 (Windows).
-   It installs an nginx in WSL2 as Linux daemon and configures it to forward all incoming TCP traffic on Port 443 to the Ingress controller endpoint.
+   This script will check if Traefik is running on the Windows host. If it is running, K3s will be configured to use external Traefik. If it is not running, K3s will be configured to use external Traefik once it is available.
 
    **Attention:**
 
