@@ -1,29 +1,42 @@
 # k3s-setup
 
-## What is it good for?
+An easy-to-use project to automatically set up a K3s-based Kubernetes environment for local development. It supports native Linux as well as WSL2 (Windows Subsystem for Linux 2) configurations – no more need for Docker Desktop on Windows, making it especially ideal for corporate environments.
 
-This project will make it very easy to automatically setup a K3s based Kubernetes environment on your local development machine with metrics, certificate manager, ingress controller and dashboard.
+---
 
-It supports native Linux and also a WSL2 based setup.
-There is no more need to use Docker for Desktop on Windows which makes it ideal for Corporate environments to save of license costs.
+## Table of Contents
 
-The setup was tested for following environments:
+1. [Overview](#overview)
+2. [Quick Start Guide](#quick-start-guide)
+3. [Requirements](#requirements)
+4. [Installation Steps](#installation-steps)
+5. [Post-Installation and Windows Setup Scripts](#post-installation-and-windows-setup-scripts)
+6. [Detailed Script Breakdown](#detailed-script-breakdown)
+7. [Using External Traefik with K3s Ingress](#using-external-traefik-with-k3s-ingress)
+8. [Stopping, Restarting & Uninstalling](#stopping-restarting--uninstalling)
 
+---
+
+## Overview
+
+This project automatically sets up a minimal K3s cluster with essential services including:
+- Kubernetes Metrics Server
+- Certificate Manager (with a self-signed root certificate)
+- Kubernetes Dashboard
+
+On Windows (via WSL2) it also configures K3s to work with an external Traefik instance running on the host.
+
+Tested environments include:
 - Ubuntu Linux 22.04
 - Debian 11
-- Ubuntu Linux 22.04 for WSL2 (MS Windows 10 / 11)
-- Debian 11 for WSL2 (MS Windows 10 / 11)
+- Ubuntu Linux 22.04 on WSL2 (Windows 10/11)
+- Debian 11 on WSL2 (Windows 10/11)
 
-## How to start? (TL;DR)
+---
 
-### Requirements
+## Quick Start Guide
 
-- Make sure your Linux or WSL2 environment has access to the Internet (directly or via properly configured HTTP/HTTPS proxy)
-- Your WSL2 distro must have [systemd support](https://devblogs.microsoft.com/commandline/systemd-support-is-now-available-in-wsl/#set-the-systemd-flag-set-in-your-wsl-distro-settings) enabled
-- Make sure you have `sudo` permissions
-- You need to have `curl` and [helm installed](https://helm.sh/docs/intro/install/) in your Linux environment
-
-### Really.. I want to start it now
+### Clone and Run
 
 ```bash
 git clone https://github.com/groundhog2k/k3s-setup.git
@@ -31,100 +44,179 @@ cd k3s-setup
 ./k3s-setup.sh
 ```
 
-Install the self-signed root certificate that was generated in `./cluster-system/cert-manager/certs/tls.crt` into your local browser or computer truststore for root certificates.
+After running, install the self-signed root certificate found at:
+```
+./cluster-system/cert-manager/certs/tls.crt
+```
+into your browser or computer’s truststore.
 
-When setup is finished and all services are running open [https://k8sdash](https://k8sdash) in your browser and enjoy Kubernetes.
+Access the Kubernetes Dashboard by opening:
+[https://k8sdash](https://k8sdash) in your browser.
 
-**Important - For Windows only:**
+### Windows Specific Instructions
 
-Edit the hosts file (typically in [`C:\Windows\system32\drivers\etc\hosts`](C:/Windows/system32/drivers/etc/hosts)) and add a mapping line for the hostname k8sdash:
+1. Edit the hosts file (typically located at `C:\Windows\system32\drivers\etc\hosts`) and add:
+   ```
+   127.0.0.1 k8sdash
+   ```
+2. For Linux/WSL2, update your KUBECONFIG:
+   ```bash
+   export KUBECONFIG=~/.kube/k3s.yaml
+   ```
 
-```text
-127.0.0.1 k8sdash
+---
+
+## Requirements
+
+- Internet access (direct or via a configured HTTP/HTTPS proxy)
+- WSL2 distros must have [systemd support enabled](https://devblogs.microsoft.com/commandline/systemd-support-is-now-available-in-wsl/#set-the-systemd-flag-set-in-your-wsl-distro-settings)
+- `sudo` privileges
+- Installed `curl` and [Helm](https://helm.sh/docs/intro/install/)
+
+---
+
+## Installation Steps
+
+1. **Clone the repository and run the setup script:**
+   ```bash
+   git clone https://github.com/groundhog2k/k3s-setup.git
+   cd k3s-setup
+   ./k3s-setup.sh
+   ```
+2. **Certificate Installation:**
+   - After installation, install the generated self-signed root certificate (`./cluster-system/cert-manager/certs/tls.crt`) into your local system truststore.
+
+3. **Access Dashboard:**
+   - Open [https://k8sdash](https://k8sdash) in your browser.
+
+4. **Windows Host:**
+   - Edit the Windows hosts file to add the mapping for `k8sdash`.
+
+5. **KUBECONFIG Configuration (Linux/WSL2):**
+   - Run:
+     ```bash
+     export KUBECONFIG=~/.kube/k3s.yaml
+     ```
+
+---
+
+## Post-Installation and Windows Setup Scripts
+
+This project provides additional scripts for post-install configuration to ensure that your environment is correctly set up after installing K3s.
+
+### WSL2 Post-Installation Script
+
+For Linux or WSL2 users, the `wsl2-post-install-script.sh` performs the following tasks:
+- **KUBECONFIG Setup:** Adds `export KUBECONFIG=~/.kube/k3s.yaml` to your `~/.bashrc` so that new sessions have the correct KUBECONFIG environment variable set.
+- **Hosts File Update:** Updates `/etc/hosts` with the entry `127.0.0.1 k8sdash` to simplify access to the Kubernetes Dashboard.
+- **Certificate Installation:** Installs the self-signed certificate (`./cluster-system/cert-manager/certs/tls.crt`) into your system’s CA store.
+
+**Usage:**
+Run the script from the project root:
+```bash
+./wsl2-post-install-script.sh
 ```
 
-To configure the correct KUBECONFIG in Linux/WSL2 do:
+### Windows Post-Installation Script
 
-```bash
-export KUBECONFIG=~/.kube/k3s.yaml
+For Windows users, the `windows-post-install-script.ps1` does the following:
+
+- **KUBECONFIG Configuration:** Sets the KUBECONFIG environment variable persistently for the current user.
+- **Hosts File Update:** Adds the `127.0.0.1 k8sdash` entry to your Windows hosts file.
+- **Certificate Installation:** Imports the self-signed certificate into the Windows Trusted Root store.  
+  _Note: Running this script may require administrative privileges._
+
+**Usage:**
+Open PowerShell as Administrator and execute:
+```powershell
+.\windows-post-install-script.ps1
 ```
 
-## How to stop or (re)-start?
+### Windows Uninstallation Script
 
-You can stop the installed k3s with:
+If there is a need to remove the modifications made by the Windows post-install script, you can use the `windows-uninstall.ps1` script. It will:
 
-```bash
-k3s-killall.sh
-```
+- Remove the KUBECONFIG environment variable from the current user.
+- Remove the `127.0.0.1 k8sdash` entry from your hosts file.
+- Remove the self-signed certificate from the Trusted Root store (ensure the certificate is correctly identified).
 
-...and start it again with:
-
-```bash
-sudo service k3s start
-```
-
-## How to uninstall?
-
-Uninstall everything related to k3s with a simple:
-
-```bash
-k3s-uninstall.sh
+**Usage:**
+Open PowerShell as Administrator and execute:
+```powershell
+.\windows-uninstall.ps1
 ```
 
 ---
 
-## Give me the details
+## Detailed Script Breakdown
 
-### For Linux
+The main script `k3s-setup.sh` builds upon several sub-scripts:
 
-For Linux it will simply install K3s and prepare a few more services like, metrics server, Jetstack certificate manager, Ingress nginx and Kubernetes dashboard.
+1. **k3s/prepare-k3s.sh**
+   - Copies `crictl.yaml` to `/etc` to set containerd as the primary container runtime.
+   - Downloads and starts a clean K3s cluster (without Helm controller, Traefik, or Metrics Server).
 
-### Inside WSL2
+2. **cluster-system/cluster-setup.sh**
+   - Creates a Kubernetes namespace `cluster-system` to house additional components.
+   - **Sub-scripts include:**
+     - **metrics-server/install.sh:** Installs Kubernetes Metrics Server using the official Helm chart.
+     - **cert-manager/install.sh:** Generates a self-signed root certificate (if not already present) and deploys the Jetstack Cert-Manager.
+     - **k8s-dashboard/install.sh:** Installs the Kubernetes Dashboard via Helm.  
+       _Note: Make sure the self-signed root certificate is trusted by your system._
 
-In WSL2 it will spin up K3s inside the WSL environment, deploy the same services like on the Linux environment and configure K3s to use external Traefik on the Windows host.
+3. **Traefik Configuration Check**
+   - The main `k3s-setup.sh` script checks for Traefik running on the Windows host.  
+     If detected, it configures K3s to use external Traefik. Otherwise, K3s waits until Traefik becomes available.
 
-### All the scripts in detail
+---
 
-The script `k3s-setup.sh` builds the bracket around a few other scripts.
-It will call the following sub-scripts:
+## Using External Traefik with K3s Ingress
 
-1. `k3s/prepare-k3s.sh`
+By default, in the provided `docker-compose-traefik.yml` file, the flag for Kubernetes Ingress is commented out to prevent startup errors when the Kubernetes API is unavailable.
 
-    K3s is using the crictl tool and containerd as runtime. `crictl` has a default [search order](https://github.com/kubernetes-sigs/cri-tools/blob/master/docs/crictl.md) for container runtimes which is not optimal.
-    At first it will copy the `crictl.yaml` to `/etc` to point the default search to containerd.
+Example configuration:
+```yaml
+command:
+  - --api.insecure=true
+  #- --providers.kubernetesingress
+  - --entrypoints.web.address=:80
+  - --entrypoints.websecure.address=:443
+```
 
-    In a second step it downloads and spins up K3s WITHOUT helm controller, treafik and metrics-server to create a really clean K8s environment (similar to vanilla Kubernetes).
+### Why Comment Out the Flag?
+When starting Traefik via Docker Compose before K3s is installed, the Kubernetes API endpoint isn’t available. Commenting out the `--providers.kubernetesingress` flag prevents errors like:
+```
+time="2025-02-14T21:00:19Z" level=error msg="Cannot start the provider *ingress.Provider: endpoint missing for external cluster client"
+```
 
-2. `cluster-system/cluster-setup.sh`
+### Steps to Enable Ingress with K3s
+1. **Edit `docker-compose-traefik.yml`:**
+   - Uncomment the `--providers.kubernetesingress` line.
+2. **Restart Traefik:**
+   - Run:
+     ```bash
+     docker-compose down
+     docker-compose up -d traefik
+     ```
+This enables Traefik to detect ingress objects and integrate with your K3s cluster.
 
-   This sub-script creates a namespace `cluster-system`. All following custom cluster-wide components will be deployed to this namespace via helm charts.
+---
 
-   1. `cluster-system/metrics-server/install.sh`
+## Stopping, Restarting & Uninstalling
 
-      Installs the Kubernetes metrics-server from the [original helm chart](https://github.com/kubernetes-sigs/metrics-server).
+### To Stop K3s
+```bash
+k3s-killall.sh
+```
 
-   2. `cluster-system/cert-manager/install.sh`
+### To Restart K3s
+```bash
+sudo service k3s start
+```
 
-      The script generates a self-signed root certificate (if not already existend in the [`certs`](https://github.com/groundhog2k/k3s-setup/tree/main/cluster-system/cert-manager/certs) folder) and deploys this together with the [Jetstack cert-manager](https://github.com/cert-manager/cert-manager).
+### To Uninstall K3s and All Components
+```bash
+k3s-uninstall.sh
+```
 
-   3. `cluster-system/ingress-nginx/install.sh`
-
-      Deploys the [Ingress-nginx](https://github.com/kubernetes/ingress-nginx) service as Kubernetes Ingress Controller.
-
-   4. `cluster-system/k8s-dashboard/install.sh`
-
-      This scripts deploys the [Kubernetes dashboard](https://github.com/kubernetes/dashboard) management UI from the original helm chart.
-
-      Together with the Ingress component from previous step the UI should appear for the local URI [https://k8sdash](https://k8sdash)
-
-      **Important:**
-
-      **Install the self-signed root certificate into your local browser or computer truststore for root certificates.**
-
-3. `k3s-setup.sh`
-
-   This script will check if Traefik is running on the Windows host. If it is running, K3s will be configured to use external Traefik. If it is not running, K3s will be configured to use external Traefik once it is available.
-
-   **Attention:**
-
-   **Be aware that this will overwrite a possible existing `/etc/nginx.conf` in your WSL2.**
+Enjoy your Kubernetes environment with all the essential tools ready for development!
