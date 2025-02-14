@@ -1,6 +1,6 @@
-# k3s-setup
+# WSL2 k3s-setup
 
-An easy-to-use project to automatically set up a K3s-based Kubernetes environment for local development. It supports native Linux as well as WSL2 (Windows Subsystem for Linux 2) configurations – no more need for Docker Desktop on Windows, making it especially ideal for corporate environments.
+An easy-to-use project to automatically set up a K3s-based Kubernetes environment for local development. It is made for WSL2 (Windows Subsystem for Linux 2) but supports native Linux configurations as well – no more need for Docker Desktop on Windows, making it especially ideal for corporate environments.
 
 ---
 
