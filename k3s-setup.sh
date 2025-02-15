@@ -4,6 +4,14 @@
 cd k3s
 ./prepare-k3s.sh
 
+# Wait until the k3s API server is up before moving on
+echo "Waiting for K3s API server to become reachable..."
+until kubectl get nodes --kubeconfig=~/.kube/k3s.yaml >/dev/null 2>&1; do
+    echo "Waiting for API server..."
+    sleep 5
+done
+echo "K3s API server is up!"
+
 ## 2. Prepare cluster services
 cd ../cluster-system
 ./cluster-setup.sh
