@@ -7,7 +7,7 @@ echo ">>>>> Bootstrapping K3s"
 sudo cp crictl.yaml /etc
 
 # Setup K3s without additional controllers (we will do it all by ourselves)
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik,metrics-server --disable-helm-controller --write-kubeconfig-mode 644" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik,metrics-server --disable-helm-controller --write-kubeconfig-mode 644 --tls-san 127.0.0.1" sh -
 
 # Switch to k3s kubeconfig context
 mkdir -p ~/.kube
