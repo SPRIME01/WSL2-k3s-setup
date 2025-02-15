@@ -14,6 +14,7 @@ An easy-to-use project to automatically set up a K3s-based Kubernetes environmen
 6. [Detailed Script Breakdown](#detailed-script-breakdown)
 7. [Using External Traefik with K3s Ingress](#using-external-traefik-with-k3s-ingress)
 8. [Stopping, Restarting & Uninstalling](#stopping-restarting--uninstalling)
+9. [Using Pulumi to Manage K3s](#using-pulumi-to-manage-k3s)
 
 ---
 
@@ -107,7 +108,7 @@ This project provides additional scripts for post-install configuration to ensur
 ### WSL2 Post-Installation Script
 
 For Linux or WSL2 users, the `wsl2-post-install-script.sh` performs the following tasks:
-- **KUBECONFIG Setup:** Adds `export KUBECONFIG=~/.kube/k3s.yaml` to your `~/.bashrc` so that new sessions have the correct KUBECONFIG environment variable set.
+- **KUBECONFIG Setup:** Adds `export KUBECONFIG=~/.kube/k3s.yaml` to your `~/.bashrc` and, if present, to `~/.zshrc` so that new sessions have the correct KUBECONFIG environment variable set.
 - **Hosts File Update:** Updates `/etc/hosts` with the entry `127.0.0.1 k8sdash` to simplify access to the Kubernetes Dashboard.
 - **Certificate Installation:** Installs the self-signed certificate (`./cluster-system/cert-manager/certs/tls.crt`) into your system’s CA store.
 
@@ -218,5 +219,28 @@ sudo service k3s start
 ```bash
 k3s-uninstall.sh
 ```
+
+---
+
+## Using Pulumi to Manage K3s
+
+After k3s is installed, ensure your shell has the correct kubeconfig:
+```bash
+export KUBECONFIG=~/.kube/k3s.yaml
+```
+Then in your Pulumi program, configure the Kubernetes provider to use this kubeconfig. For example, in a TypeScript Pulumi project:
+
+```typescript
+import * as k8s from "@pulumi/kubernetes";
+
+// Use the KUBECONFIG environment variable
+const provider = new k8s.Provider("k3s", {
+    kubeconfig: process.env.KUBECONFIG,
+});
+
+// ...rest of your Pulumi program code...
+```
+
+Ensure you start a new shell session or re-source your ~/.bashrc if using the WSL2 post-install script.
 
 Enjoy your Kubernetes environment with all the essential tools ready for development!

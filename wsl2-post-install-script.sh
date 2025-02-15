@@ -1,9 +1,17 @@
 #!/bin/bash
 
-# 1. Ensure KUBECONFIG is correctly set for new sessions.
+# 1. Ensure KUBECONFIG is correctly set for new bash sessions.
 if ! grep -qxF "export KUBECONFIG=~/.kube/k3s.yaml" ~/.bashrc; then
   echo "export KUBECONFIG=~/.kube/k3s.yaml" >> ~/.bashrc
   echo "Added KUBECONFIG to ~/.bashrc"
+fi
+
+# Also update ~/.zshrc if it exists (for zsh users, e.g., using oh-my-posh)
+if [ -f ~/.zshrc ]; then
+  if ! grep -qxF "export KUBECONFIG=~/.kube/k3s.yaml" ~/.zshrc; then
+    echo "export KUBECONFIG=~/.kube/k3s.yaml" >> ~/.zshrc
+    echo "Added KUBECONFIG to ~/.zshrc"
+  fi
 fi
 
 # 2. Update /etc/hosts to include the k8sdash mapping.
