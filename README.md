@@ -1,4 +1,4 @@
-# Modded k3s Setup
+# WSL2 k3s Setup
 
 A project for deploying k3s on WSL2 with external Traefik integration, Rancher management, and Pulumi compatibility.
 
