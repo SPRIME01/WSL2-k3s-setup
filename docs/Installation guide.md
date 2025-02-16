@@ -32,33 +32,7 @@ This guide provides a detailed walkthrough for deploying a k3s Kubernetes cluste
 ## 1. Prerequisites and WSL2 Configuration
 
 ### 1.1 WSL2 Kernel Preparation
-k3s requires kernel support for Kubernetes networking components. Microsoft’s default WSL2 kernel lacks critical modules (e.g., `CONFIG_BRIDGE_NETFILTER`, `CONFIG_VXLAN`). Compile a custom kernel:
-
-1. **Install dependencies**:
-   ```bash
-   sudo apt update && sudo apt install build-essential flex bison libssl-dev libelf-dev
-   ```
-2. **Download WSL2 kernel source**:
-   ```bash
-   git clone https://github.com/microsoft/WSL2-Linux-Kernel
-   cd WSL2-Linux-Kernel
-   ```
-3. **Configure kernel**:
-   ```bash
-   cp Microsoft/config-wsl .config
-   cat >> .config << EOF
-   CONFIG_BRIDGE_NETFILTER=y
-   CONFIG_NETFILTER_XT_MATCH_COMMENT=y
-   CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
-   CONFIG_NETFILTER_XT_MATCH_OWNER=y
-   CONFIG_NETFILTER_XT_MATCH_PHYSDEV=y
-   CONFIG_VXLAN=y
-   CONFIG_GENEVE=y
-   EOF
-   make oldconfig && make -j $(nproc)
-   ```
-4. **Replace WSL2 kernel**:
-   Copy `arch/x86/boot/bzImage` to `C:\Windows\System32\lxss\tools\kernel` after shutting down WSL (`wsl --shutdown`).
+Please refer to the [WSL2 Kernel Compilation Guide](/docs/WSL2-Kernel-Guide.md) for kernal compilation steps.
 
 ### 1.2 Static IP Assignment and Host Networking
 To ensure consistent networking with Docker’s static IP:
