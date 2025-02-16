@@ -1,0 +1,13 @@
+additionalArguments:
+  - "--certificatesresolvers.k3sresolver.acme.tlschallenge=true"
+  - "--certificatesresolvers.k3sresolver.acme.email=admin@yourdomain.com"
+  - "--certificatesresolvers.k3sresolver.acme.storage=/data/k3s-acme.json"
+
+persistence:
+  existingClaim: "cert-volume"
+
+volumes:
+  - name: cert-volume
+    hostPath:
+      path: /etc/rancher/k3s/certs
+      type: Directory

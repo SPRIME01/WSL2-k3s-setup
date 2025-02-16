@@ -1,0 +1,4 @@
+# Optional: Rancher Helm configuration
+
+hostname: rancher.yourdomain.com
+replicas: 1

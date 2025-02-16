@@ -1,0 +1,12 @@
+# Optional: Additional cluster setup resources
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k3s-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    write-kubeconfig-mode: "0644"
+    kube-apiserver-arg:
+      - "enable-admission-plugins=NodeRestriction"

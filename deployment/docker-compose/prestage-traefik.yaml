@@ -1,0 +1,37 @@
+version: "3.3"
+services:
+  traefik-bootstrap:
+    image: "traefik:v3.3"
+    container_name: "traefik-cert-generator"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.k3sresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.k3sresolver.acme.email=admin@yourdomain.com"
+      - "--certificatesresolvers.k3sresolver.acme.storage=/letsencrypt/k3s-acme.json"
+    ports:
+      - "443:443"
+    volumes:
+      - "c:/k3s-cert-volume:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - k3s-preflight
+
+  cert-trigger:
+    image: alpine:latest
+    command: ["sh", "-c", "echo 'Certificate generation triggered'"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cert-issuer.rule=Host(`rancher.yourdomain.com`)"
+      - "traefik.http.routers.cert-issuer.entrypoints=websecure"
+      - "traefik.http.routers.cert-issuer.tls.certresolver=k3sresolver"
+    networks:
+      - k3s-preflight
+
+networks:
+  k3s-preflight:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.90.0/24

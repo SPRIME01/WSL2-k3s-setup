@@ -1,7 +1,0 @@
-secretGenerator:
-  - name: local-rootca
-    files:
-      - tls.crt
-      - tls.key
-generatorOptions:
-  disableNameSuffixHash: true

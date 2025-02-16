@@ -1,7 +1,0 @@
-installCRDs: true
-
-prometheus:
-  enabled: false
-
-extraArgs:
-  - --cluster-resource-namespace=cluster-system
