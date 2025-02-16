@@ -21,11 +21,7 @@ This guide provides a detailed walkthrough for deploying a k3s Kubernetes cluste
 6. [Validation and Troubleshooting](#6-validation-and-troubleshooting)
    - [6.1 Cluster Health Checks](#61-cluster-health-checks)
    - [6.2 Traefik-k3s Integration Test](#62-traefik-k3s-integration-test)
-7. [Certificate Pre-Generation with Docker-Compose](#7-certificate-pre-generation-with-docker-compose)
-   - [7.1 Docker-Compose for Certificate Pre-Generation](#71-docker-compose-for-certificate-pre-generation)
-   - [7.2 Modified Installation Sequence](#72-modified-installation-sequence)
-   - [7.3 DNS Challenge Alternative](#73-dns-challenge-alternative)
-   - [7.4 Validation](#74-validation)
+7. [Certificate Bootstrapping](#7-certificate-bootstrapping)
 
 ---
 
@@ -39,12 +35,12 @@ To ensure consistent networking with Docker’s static IP:
 
 1. **Assign static IP to WSL2**:
    ```bash
-   sudo ip addr add 192.168.80.2/24 dev eth0  # Replace with desired IP
+   sudo ip addr add <YOUR_STATIC_IP>/24 dev eth0  # Replace <YOUR_STATIC_IP> with your chosen IP
    ```
 2. **Configure Windows NAT**:
    Run PowerShell as Administrator:
    ```powershell
-   New-NetNat -Name WSL2StaticIP -InternalIPInterfaceAddressPrefix "192.168.80.0/24"
+   New-NetNat -Name WSL2StaticIP -InternalIPInterfaceAddressPrefix "<YOUR_NETWORK_CIDR>"  # e.g., "192.168.80.0/24"
    ```
    Persist IP assignment across reboots using a WSL2 startup script.
 
@@ -62,9 +58,9 @@ sudo rm -rf /var/lib/rancher/k3s /etc/rancher/k3s /var/lib/cni/networks/k8s-pod-
 ### 2.2 Install k3s Server Without Bundled Components
 Disable Traefik and servicelb during installation:
 ```bash
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --disable servicelb --tls-san 192.168.80.2" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --disable servicelb --tls-san <YOUR_STATIC_IP>" sh -
 ```
-- `--tls-san 192.168.80.2`: Adds WSL2’s static IP to TLS SAN list for API server access.
+- `--tls-san <YOUR_STATIC_IP>`: Adds your chosen static IP to the TLS SAN list for API server access.
 
 ---
 
@@ -79,9 +75,9 @@ docker run -d --name traefik -p 80:80 -p 443:443 `
 ```
 
 ### 3.2 Configure k3s for External Traefik
-Modify k3s service to advertise API server via WSL2’s IP:
+Modify the k3s configuration to advertise the API server via your static IP:
 ```bash
-sudo sed -i 's/server:.*/server: https:\/\/192.168.80.2:6443/' /etc/rancher/k3s/k3s.yaml
+sudo sed -i 's/server:.*/server: https:\/\/<YOUR_STATIC_IP>:6443/' /etc/rancher/k3s/k3s.yaml
 ```
 
 ---
@@ -106,11 +102,11 @@ After DNS resolution for `rancher.yourdomain.com` points to WSL2’s IP, access 
 ## 5. Pulumi Integration and Networking
 
 ### 5.1 Configure kubeconfig for Windows Host
-Copy `k3s.yaml` to Windows and update server IP:
+Copy `k3s.yaml` to Windows and update the cluster server IP:
 ```bash
 cp /etc/rancher/k3s/k3s.yaml /mnt/c/Users/%USERNAME%/.kube/config
 ```
-Edit `C:\Users\%USERNAME%\.kube\config` to replace `127.0.0.1` with `192.168.80.2`.
+Edit `C:\Users\%USERNAME%\.kube\config` to replace `127.0.0.1` with `<YOUR_STATIC_IP>`.
 
 ### 5.2 Port Forwarding and Firewall Rules
 Allow Kubernetes API traffic through Windows Defender Firewall:
@@ -152,122 +148,9 @@ spec:
 
 ---
 
-## 7. Certificate Pre-Generation with Docker-Compose
+## 7. Certificate Bootstrapping
 
-### 7.1 Docker-Compose for Certificate Pre-Generation
-Create `prestage-traefik.yaml` on the Windows host:
-```yaml
-version: "3.3"
-services:
-  traefik-bootstrap:
-    image: "traefik:v3.3"
-    container_name: "traefik-cert-generator"
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entryPoints.websecure.address=:443"
-      - "--certificatesresolvers.k3sresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.k3sresolver.acme.email=admin@yourdomain.com"
-      - "--certificatesresolvers.k3sresolver.acme.storage=/letsencrypt/k3s-acme.json"
-    ports:
-      - "443:443"
-    volumes:
-      - "c:/k3s-cert-volume:/letsencrypt"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    networks:
-      - k3s-preflight
-
-  cert-trigger:
-    image: alpine:latest
-    command: ["sh", "-c", "echo 'Certificate generation triggered'"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cert-issuer.rule=Host(`rancher.yourdomain.com`)"
-      - "traefik.http.routers.cert-issuer.entrypoints=websecure"
-      - "traefik.http.routers.cert-issuer.tls.certresolver=k3sresolver"
-    networks:
-      - k3s-preflight
-
-networks:
-  k3s-preflight:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.90.0/24
-```
-
-### 7.2 Modified Installation Sequence
-
-#### Step 1: Generate Certificates
-```powershell
-# Windows host
-docker-compose -f prestage-traefik.yaml up -d
-
-# Verify ACME issuance
-curl -vk https://rancher.yourdomain.com --resolve rancher.yourdomain.com:443:192.168.90.2
-```
-
-#### Step 2: Install k3s with Certificate Preload
-```bash
-# WSL2 terminal
-sudo mkdir -p /etc/rancher/k3s/certs
-sudo cp /mnt/c/k3s-cert-volume/k3s-acme.json /etc/rancher/k3s/certs/
-
-INSTALL_K3S_EXEC="server
-  --disable traefik
-  --tls-san rancher.yourdomain.com
-  --kubelet-arg=volume-plugin-dir=/etc/rancher/k3s/certs"
-
-curl -sfL https://get.k3s.io | sh -
-```
-
-#### Step 3: Cluster Traefik Configuration
-Create `traefik-helm-values.yaml`:
-```yaml
-additionalArguments:
-  - "--certificatesresolvers.k3sresolver.acme.tlschallenge=true"
-  - "--certificatesresolvers.k3sresolver.acme.email=admin@yourdomain.com"
-  - "--certificatesresolvers.k3sresolver.acme.storage=/data/k3s-acme.json"
-
-persistence:
-  existingClaim: "cert-volume"
-
-volumes:
-  - name: cert-volume
-    hostPath:
-      path: /etc/rancher/k3s/certs
-      type: Directory
-```
-
-Deploy Traefik:
-```bash
-helm upgrade --install traefik traefik/traefik -f traefik-helm-values.yaml
-```
-
-#### Step 4: Teardown Bootstrap
-```powershell
-docker-compose -f prestage-traefik.yaml down
-```
-
-### 7.3 DNS Challenge Alternative
-For non-public hosts, modify `prestage-traefik.yaml` with DNS credentials:
-```yaml
-# traefik-bootstrap service additions
-command:
-  - "--certificatesresolvers.k3sresolver.acme.dnschallenge=true"
-  - "--certificatesresolvers.k3sresolver.acme.dnschallenge.provider=cloudflare"
-
-environment:
-  - CF_API_EMAIL=${CF_EMAIL}
-  - CF_API_KEY=${CF_API_KEY}
-```
-
-### 7.4 Validation
-Confirm certificate continuity:
-```bash
-kubectl exec deploy/traefik -- ls /data
-# Should show k3s-acme.json with timestamp matching pre-stage
-```
+For detailed instructions on certificate pre-generation and integration with k3s, please refer to the [Certificate Bootstrapping Guide](Certificate%20bootstraping%20guide.md).
 
 ---
 
