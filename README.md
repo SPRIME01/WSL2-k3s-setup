@@ -9,7 +9,7 @@ This project provides a modular and customizable setup for k3s on Windows Subsys
 First, clone the repository:
 ```bash
 git clone https://github.com/SPRIME01/WSL2-k3s-setup.git
-cd modded-k3s-setup
+cd WSL2-k3s-setup
 ```
 
 
